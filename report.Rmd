@@ -1,0 +1,17 @@
+---
+title: "Practical Machine Learning Course Report"
+author: "Pablo Adames"
+date: "September 26, 2015"
+output: html_document
+---
+
+
+# Load data
+
+```{r, load data from disk, cache=TRUE, warning=FALSE}
+tstdat<-read.csv(file="data/pml-testing.csv")
+trndat<-read.csv(file="data/pml-training.csv")
+```
+
+# Exploratory analysis
+
