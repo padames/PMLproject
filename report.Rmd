@@ -73,6 +73,8 @@ print(paste0(dim(trnD)[1], " training observations", " on ", dim(trnD)[2], " var
 # Exploratory analysys
 
 Principal component analysis was used due to the high number of predictors.
+A five component PCA shows that there are visible clusters for the PC1 and PC2 
+interaction. There is only one outlier from this analysis.
 
 ```{r, exploratory analysis with PCA, cache=TRUE,warning=FALSE,fig.align='center'}
 preproc <- preProcess(trnD[-1],method = "pca",pcaComp = 5)

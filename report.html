@@ -120,7 +120,7 @@ print(paste0(dim(trnD)[1], &quot; training observations&quot;, &quot; on &quot;,
 </div>
 <div id="exploratory-analysys" class="section level1">
 <h1>Exploratory analysys</h1>
-<p>Principal component analysis was used due to the high number of predictors.</p>
+<p>Principal component analysis was used due to the high number of predictors. A five component PCA shows that there are visible clusters for the PC1 and PC2 interaction. There is only one outlier from this analysis.</p>
 <pre class="r"><code>preproc &lt;- preProcess(trnD[-1],method = &quot;pca&quot;,pcaComp = 5)
 dumbbellPC &lt;- predict(preproc,trnD[-1])
 featurePlot(x=dumbbellPC,y=trnD$`trndat$classe`,plot=&quot;pairs&quot;)</code></pre>
