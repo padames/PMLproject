@@ -70,11 +70,47 @@ img {
 
 <div id="load-data" class="section level1">
 <h1>Load data</h1>
-<pre class="r"><code>tstdat&lt;-read.csv(file=&quot;data/pml-testing.csv&quot;)
-trndat&lt;-read.csv(file=&quot;data/pml-training.csv&quot;)</code></pre>
+<p>Data source: <a href="http://groupware.les.inf.puc-rio.br/har"><a href="http://groupware.les.inf.puc-rio.br/har" class="uri">http://groupware.les.inf.puc-rio.br/har</a></a></p>
+<pre class="r"><code># read the data for the project as training and test groups
+trndat&lt;-read.csv(file=&quot;data/pml-training.csv&quot;)
+tstdat&lt;-read.csv(file=&quot;data/pml-testing.csv&quot;)</code></pre>
 </div>
 <div id="exploratory-analysis" class="section level1">
 <h1>Exploratory analysis</h1>
+<p>A first inspection showed there we too many columns with <code>NA</code> values. A first approach was to get rid of those columns. A total of 36 variables were discarded. Then the <code>NA</code>s were imputed using the <code>knnImpute</code> method and the data was centered and scaled through the <code>preProcess</code> function from the package <code>caret</code>.</p>
+<p>After imputing and standarizing there are still columns with many <code>NA</code>s that the imputing algorithm could not fix. Those columns were eliminated with the custom function <code>extractColumnsWithTooManyNAs</code> below. The number of predictors went from an initial 159 to 123 after imputing and finally to 57 after eliminating all <code>NA</code>s remaining.</p>
+<pre class="r"><code>library(caret)
+column_class &lt;- function( col ){ifelse(is.data.frame(col), class(col[[1]]), class(col))}
+extractNumericCols &lt;- function( df ) {
+  # get the column names to index inot the data frame
+  l_col_names &lt;- colnames(df)
+  # nullify the columns with non-numeric values, return list of data.frames
+  l &lt;- sapply(l_col_names, 
+              function(x) { cls &lt;- column_class( df[x] );
+              ifelse(cls %in% c(&quot;numeric&quot;,&quot;integer&quot;), df[x], &quot;NULL&quot;)})
+  # filter the columns where there are only numeric values
+  isNULL &lt;- which(l[names(l)] ==&quot;NULL&quot;); ll &lt;- l[-isNULL] 
+  # compose a data frame with the numeric columns (data.frames)
+  ndf &lt;- do.call(cbind.data.frame,ll)
+}
+# new data frame with only numeric columns:
+trndf &lt;- extractNumericCols(trndat)
+# add outcome column as column #1:
+trndf &lt;- cbind(trndat$classe,trndf,deparse.level = 1)
+# filter the numeric columns in the test set
+numericColNames &lt;- colnames(trndf)
+tstdf &lt;- tstdat[,which(colnames(tstdat) %in% numericColNames)]
+#Impute and standarize:
+preObj &lt;- preProcess(trndf[,-1],method = &quot;knnImpute&quot;)
+
+#if there are still columns with NAs eliminate them altogether
+extractColumnsWithTooManyNAs &lt;- function( df){
+  l &lt;- sapply(colnames(df), function(x) any( is.na(df[x][[1]]) ) )
+  df[-which(l)]
+}
+# eliminate all columns with NAs in them
+trnD &lt;- extractColumnsWithTooManyNAs(trndf)
+tstD &lt;- extractColumnsWithTooManyNAs(tstdf)</code></pre>
 </div>
 
 

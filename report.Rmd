@@ -8,10 +8,60 @@ output: html_document
 
 # Load data
 
+Data source: [http://groupware.les.inf.puc-rio.br/har](http://groupware.les.inf.puc-rio.br/har)
+
 ```{r, load data from disk, cache=TRUE, warning=FALSE}
-tstdat<-read.csv(file="data/pml-testing.csv")
+# read the data for the project as training and test groups
 trndat<-read.csv(file="data/pml-training.csv")
+tstdat<-read.csv(file="data/pml-testing.csv")
 ```
 
 # Exploratory analysis
 
+A first inspection showed there we too many columns with `NA` values.
+A first approach was to get rid of those columns. A total of 36 variables
+were discarded. Then the `NA`s were imputed using the `knnImpute`
+method and the data was centered and scaled through the `preProcess`
+function from the package `caret`.
+
+After imputing and standarizing there are still columns with many `NA`s
+that the imputing algorithm could not fix. Those columns were eliminated
+with the custom function `extractColumnsWithTooManyNAs` below.
+The number of predictors went from an initial 159 to 123 after imputing and
+finally to 57 after eliminating all `NA`s remaining.
+
+```{r, cleaning data,cache=TRUE,warning=FALSE}
+library(caret)
+column_class <- function( col ){ifelse(is.data.frame(col), class(col[[1]]), class(col))}
+extractNumericCols <- function( df ) {
+  # get the column names to index inot the data frame
+  l_col_names <- colnames(df)
+  # nullify the columns with non-numeric values, return list of data.frames
+  l <- sapply(l_col_names, 
+              function(x) { cls <- column_class( df[x] );
+              ifelse(cls %in% c("numeric","integer"), df[x], "NULL")})
+  # filter the columns where there are only numeric values
+  isNULL <- which(l[names(l)] =="NULL"); ll <- l[-isNULL] 
+  # compose a data frame with the numeric columns (data.frames)
+  ndf <- do.call(cbind.data.frame,ll)
+}
+# new data frame with only numeric columns:
+trndf <- extractNumericCols(trndat)
+# add outcome column as column #1:
+trndf <- cbind(trndat$classe,trndf,deparse.level = 1)
+# filter the numeric columns in the test set
+numericColNames <- colnames(trndf)
+tstdf <- tstdat[,which(colnames(tstdat) %in% numericColNames)]
+#Impute and standarize:
+preObj <- preProcess(trndf[,-1],method = "knnImpute")
+
+#if there are still columns with NAs eliminate them altogether
+extractColumnsWithTooManyNAs <- function( df){
+  l <- sapply(colnames(df), function(x) any( is.na(df[x][[1]]) ) )
+  df[-which(l)]
+}
+# eliminate all columns with NAs in them
+trnD <- extractColumnsWithTooManyNAs(trndf)
+tstD <- extractColumnsWithTooManyNAs(tstdf)
+
+```
