@@ -75,8 +75,8 @@ img {
 trndat&lt;-read.csv(file=&quot;data/pml-training.csv&quot;)
 tstdat&lt;-read.csv(file=&quot;data/pml-testing.csv&quot;)</code></pre>
 </div>
-<div id="exploratory-analysis" class="section level1">
-<h1>Exploratory analysis</h1>
+<div id="cleaning-data-set" class="section level1">
+<h1>Cleaning data set</h1>
 <p>A first inspection showed there we too many columns with <code>NA</code> values. A first approach was to get rid of those columns. A total of 36 variables were discarded. Then the <code>NA</code>s were imputed using the <code>knnImpute</code> method and the data was centered and scaled through the <code>preProcess</code> function from the package <code>caret</code>.</p>
 <p>The number of predictors went from an initial 159 to 123 after imputing and finally to 57 after eliminating all remaining <code>NA</code>s remaining with the custom function <code>extractColumnsWithTooManyNAs</code> as shown below.</p>
 <pre class="r"><code>library(caret)
@@ -113,6 +113,10 @@ trnD &lt;- extractColumnsWithTooManyNAs(trndf)
 tstD &lt;- extractColumnsWithTooManyNAs(tstdf)
 print(paste0(dim(trnD)[1], &quot; training observations&quot;, &quot; on &quot;, dim(trnD)[2], &quot; variables after cleaning data.&quot;))</code></pre>
 <pre><code>## [1] &quot;19622 training observations on 57 variables after cleaning data.&quot;</code></pre>
+</div>
+<div id="exploratory-analysys" class="section level1">
+<h1>Exploratory analysys</h1>
+<p>Principal componen analysis was used due to the high number of predictors.</p>
 </div>
 
 

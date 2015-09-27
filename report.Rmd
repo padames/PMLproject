@@ -16,7 +16,7 @@ trndat<-read.csv(file="data/pml-training.csv")
 tstdat<-read.csv(file="data/pml-testing.csv")
 ```
 
-# Exploratory analysis
+# Cleaning data set
 
 A first inspection showed there we too many columns with `NA` values.
 A first approach was to get rid of those columns. A total of 36 variables
@@ -63,3 +63,7 @@ trnD <- extractColumnsWithTooManyNAs(trndf)
 tstD <- extractColumnsWithTooManyNAs(tstdf)
 print(paste0(dim(trnD)[1], " training observations", " on ", dim(trnD)[2], " variables after cleaning data."))
 ```
+
+# Exploratory analysys
+
+Principal componen analysis was used due to the high number of predictors.
