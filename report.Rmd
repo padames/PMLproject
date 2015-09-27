@@ -5,6 +5,12 @@ date: "September 26, 2015"
 output: html_document
 ---
 
+# Summary
+
+Generate a  model  to predict the type of  dumbell biceps curl 
+executed by the subjects in the __Weight Lifting Exercises Dataset__
+following the classification given by expert trainers.
+
 
 # Load data
 
