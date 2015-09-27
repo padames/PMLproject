@@ -1,7 +1,7 @@
 ---
 title: "Practical Machine Learning Course Report"
 author: "Pablo Adames"
-date: "September 26, 2015"
+date: "September 27, 2015"
 output: html_document
 ---
 
@@ -9,7 +9,7 @@ output: html_document
 
 Generate a  model  to predict the type of  dumbell biceps curl 
 executed by the subjects in the __Weight Lifting Exercises Dataset__
-following the classification given by expert trainers.
+following the classification given by expert trainers. 
 
 
 # Load data
@@ -72,4 +72,10 @@ print(paste0(dim(trnD)[1], " training observations", " on ", dim(trnD)[2], " var
 
 # Exploratory analysys
 
-Principal componen analysis was used due to the high number of predictors.
+Principal component analysis was used due to the high number of predictors.
+
+```{r, exploratory analysis with PCA, cache=TRUE,warning=FALSE,fig.align='center'}
+preproc <- preProcess(trnD[-1],method = "pca",pcaComp = 5)
+dumbbellPC <- predict(preproc,trnD[-1])
+featurePlot(x=dumbbellPC,y=trnD$`trndat$classe`,plot="pairs")
+```
