@@ -24,11 +24,9 @@ were discarded. Then the `NA`s were imputed using the `knnImpute`
 method and the data was centered and scaled through the `preProcess`
 function from the package `caret`.
 
-After imputing and standarizing there are still columns with many `NA`s
-that the imputing algorithm could not fix. Those columns were eliminated
-with the custom function `extractColumnsWithTooManyNAs` below.
 The number of predictors went from an initial 159 to 123 after imputing and
-finally to 57 after eliminating all `NA`s remaining.
+finally to 57 after eliminating all remaining `NA`s remaining 
+with the custom function `extractColumnsWithTooManyNAs` as shown below.
 
 ```{r, cleaning data,cache=TRUE,warning=FALSE}
 library(caret)
@@ -63,5 +61,5 @@ extractColumnsWithTooManyNAs <- function( df){
 # eliminate all columns with NAs in them
 trnD <- extractColumnsWithTooManyNAs(trndf)
 tstD <- extractColumnsWithTooManyNAs(tstdf)
-
+print(paste0(dim(trnD)[1], " training observations", " on ", dim(trnD)[2], " variables after cleaning data."))
 ```

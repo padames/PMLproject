@@ -78,7 +78,7 @@ tstdat&lt;-read.csv(file=&quot;data/pml-testing.csv&quot;)</code></pre>
 <div id="exploratory-analysis" class="section level1">
 <h1>Exploratory analysis</h1>
 <p>A first inspection showed there we too many columns with <code>NA</code> values. A first approach was to get rid of those columns. A total of 36 variables were discarded. Then the <code>NA</code>s were imputed using the <code>knnImpute</code> method and the data was centered and scaled through the <code>preProcess</code> function from the package <code>caret</code>.</p>
-<p>After imputing and standarizing there are still columns with many <code>NA</code>s that the imputing algorithm could not fix. Those columns were eliminated with the custom function <code>extractColumnsWithTooManyNAs</code> below. The number of predictors went from an initial 159 to 123 after imputing and finally to 57 after eliminating all <code>NA</code>s remaining.</p>
+<p>The number of predictors went from an initial 159 to 123 after imputing and finally to 57 after eliminating all remaining <code>NA</code>s remaining with the custom function <code>extractColumnsWithTooManyNAs</code> as shown below.</p>
 <pre class="r"><code>library(caret)
 column_class &lt;- function( col ){ifelse(is.data.frame(col), class(col[[1]]), class(col))}
 extractNumericCols &lt;- function( df ) {
@@ -110,7 +110,9 @@ extractColumnsWithTooManyNAs &lt;- function( df){
 }
 # eliminate all columns with NAs in them
 trnD &lt;- extractColumnsWithTooManyNAs(trndf)
-tstD &lt;- extractColumnsWithTooManyNAs(tstdf)</code></pre>
+tstD &lt;- extractColumnsWithTooManyNAs(tstdf)
+print(paste0(dim(trnD)[1], &quot; training observations&quot;, &quot; on &quot;, dim(trnD)[2], &quot; variables after cleaning data.&quot;))</code></pre>
+<pre><code>## [1] &quot;19622 training observations on 57 variables after cleaning data.&quot;</code></pre>
 </div>
 
 
