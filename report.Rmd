@@ -1,7 +1,7 @@
 ---
 title: "Practical Machine Learning Course Report"
 author: "Pablo Adames"
-date: "September 27, 2015"
+date: "October 25, 2015"
 output: html_document
 ---
 
@@ -24,7 +24,7 @@ tstdat<-read.csv(file="data/pml-testing.csv")
 
 # Cleaning data set
 
-A first inspection showed there we too many columns with `NA` values.
+A first inspection showed there were too many columns with `NA` values.
 A first approach was to get rid of those columns. A total of 36 variables
 were discarded. Then the `NA`s were imputed using the `knnImpute`
 method and the data was centered and scaled through the `preProcess`
@@ -36,6 +36,7 @@ with the custom function `extractColumnsWithTooManyNAs` as shown below.
 
 ```{r, cleaning data,cache=TRUE,warning=FALSE}
 library(caret)
+# get the column class
 column_class <- function( col ){ifelse(is.data.frame(col), class(col[[1]]), class(col))}
 extractNumericCols <- function( df ) {
   # get the column names to index inot the data frame
@@ -74,10 +75,49 @@ print(paste0(dim(trnD)[1], " training observations", " on ", dim(trnD)[2], " var
 
 Principal component analysis was used due to the high number of predictors.
 A five component PCA shows that there are visible clusters for the PC1 and PC2 
-interaction. There is only one outlier from this analysis.
+interaction. There is only one outlier from this analysis. Further plots of PC1
+Vs. PC2 show that only PC5 conditions the output in an important way.
 
 ```{r, exploratory analysis with PCA, cache=TRUE,warning=FALSE,fig.align='center'}
 preproc <- preProcess(trnD[-1],method = "pca",pcaComp = 5)
 dumbbellPC <- predict(preproc,trnD[-1])
 featurePlot(x=dumbbellPC,y=trnD$`trndat$classe`,plot="pairs")
+```
+
+# Generating a predictive model
+
+The non-linear behaviour observed in the pricipal component analysis
+motivated a random forest algorithm to be used for predicting the
+type of the dumbbell bicep curl.
+
+```{r, random forest model, cache=TRUE, warning=FALSE}
+library(doParallel)
+# cl<-makeCluster(detectCores())
+cl<-makeCluster(4)
+registerDoParallel(cl)
+require(randomForest)
+dumbbellPC$classe <- trnD$`trndat$classe`
+trainD<-createDataPartition(y=dumbbellPC$classe,p=0.3,list = FALSE)
+trainingPCsmall <-dumbbellPC[trainD,]
+```
+```
+rf_model_PC <- train(classe~.,data=trainingPCsmall,
+                     method="rf",
+                     trControl=trainControl(method="cv",number=5),
+                     prox=TRUE,
+                     allowParallel=TRUE)
+rf_model_PC
+```
+This model has 
+Another model can be build using all 53 variables:
+
+```
+trnD$classe <- trnD$`trndat$classe`
+trnD$`trndat$classe`<- NULL
+rf_model_full <- train(classe~.,data=trnD,
+                  method="rf",
+                  trControl=trainControl(method="cv",number=5),
+                  prox=TRUE,
+                  allowParallel=TRUE)
+rf_model_full
 ```
