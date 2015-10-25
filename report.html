@@ -99,30 +99,37 @@ featurePlot(x=dumbbellPC,y=trainClean$`trndat$classe`,plot=&quot;pairs&quot;)</c
 </div>
 <div id="generating-a-predictive-model" class="section level1">
 <h1>Generating a predictive model</h1>
-<p>The non-linear behaviour observed in the pricipal component analysis motivated a random forest algorithm to be used for predicting the type of the dumbbell bicep curl.</p>
+<p>The non-linear behaviour observed in the principal component analysis motivated a random forest algorithm to be used for predicting the type of the dumbbell bicep curl. In view of the long time to fit a random forest model to this data set, parallel processing was necessary.</p>
 <pre class="r"><code>library(doParallel)
-# cl&lt;-makeCluster(detectCores())
 cl&lt;-makeCluster(4)
 registerDoParallel(cl)
-require(randomForest)
-dumbbellPC$classe &lt;- trainClean$`trndat$classe`
-trainD&lt;-createDataPartition(y=dumbbellPC$classe,p=0.3,list = FALSE)
-trainingPCsmall &lt;-dumbbellPC[trainD,]</code></pre>
-<pre><code>rf_model_PC &lt;- train(classe~.,data=trainingPCsmall,
-                     method=&quot;rf&quot;,
-                     trControl=trainControl(method=&quot;cv&quot;,number=5),
-                     prox=TRUE,
-                     allowParallel=TRUE)
-rf_model_PC</code></pre>
-<p>This model has Another model can be build using all 53 variables:</p>
-<pre><code>trainClean$classe &lt;- trainClean$`trndat$classe`
-trainClean$`trndat$classe`&lt;- NULL
-rf_model_full &lt;- train(classe~.,data=trainClean,
+require(randomForest)</code></pre>
+<p>This code takes a long time to run because it uses all 53 variables, its final size is 2.9 Gb.</p>
+<pre><code>rf_model_full &lt;- train(classe~.,data=trainClean,
                   method=&quot;rf&quot;,
                   trControl=trainControl(method=&quot;cv&quot;,number=5),
                   prox=TRUE,
                   allowParallel=TRUE)
-rf_model_full</code></pre>
+rf_model_full
+Random Forest 
+
+19622 samples
+   56 predictors
+    5 classes: 'A', 'B', 'C', 'D', 'E' 
+
+No pre-processing
+Resampling: Cross-Validated (5 fold) 
+Summary of sample sizes: 15698, 15698, 15698, 15697, 15697 
+Resampling results across tuning parameters:
+
+  mtry  Accuracy   Kappa      Accuracy SD   Kappa SD    
+   2    0.9988788  0.9985818  0.0004966670  0.0006282220
+  29    0.9998981  0.9998711  0.0001395827  0.0001765530
+  56    0.9997961  0.9997421  0.0002132122  0.0002696789
+
+Accuracy was used to select the optimal model using  the largest value.
+The final value used for the model was mtry = 29. </code></pre>
+<p>Since the accuracy looks very high this model will be used to predict the test samples.</p>
 </div>
 <div id="appendix-a.-code-for-cleaning-the-original-data-set" class="section level1">
 <h1>Appendix A. Code for cleaning the original data set</h1>
@@ -131,7 +138,7 @@ rf_model_full</code></pre>
 column_class &lt;- function( col ){ifelse(is.data.frame(col), class(col[[1]]), class(col))}
 extractNumericCols &lt;- function( df ) {
   # get the column names to index inot the data frame
-  l_col_names &lt;- colnames(df)
+  l_col_names &lt;- names(df)
   # nullify the columns with non-numeric values, return list of data.frames
   l &lt;- sapply(l_col_names, 
               function(x) { cls &lt;- column_class( df[x] );
@@ -144,14 +151,12 @@ extractNumericCols &lt;- function( df ) {
 # new data frame with only numeric columns:
 trainSet &lt;- extractNumericCols(trndat)
 # add outcome column as column #1:
-trainSet &lt;- cbind(trndat$classe,trainSet,deparse.level = 1)
+trainSet$classe &lt;- trndat$classe
 # filter the numeric columns in the test set
 numericColNames &lt;- colnames(trainSet)
 testSet &lt;- tstdat[,which(colnames(tstdat) %in% numericColNames)]
-#Impute and standarize:
-preObj &lt;- preProcess(trainSet[,-1],method = &quot;knnImpute&quot;)
+print(paste0(&quot;'trainSet' data set with &quot;,dim(trainSet)[1], &quot; observations&quot;, &quot; on &quot;, dim(trainSet)[2]-1, &quot; predictors.&quot;))
 
-#if there are still columns with NAs eliminate them altogether
 extractColumnsWithTooManyNAs &lt;- function( df){
   l &lt;- sapply(colnames(df), function(x) any( is.na(df[x][[1]]) ) )
   df[-which(l)]
@@ -159,8 +164,9 @@ extractColumnsWithTooManyNAs &lt;- function( df){
 # eliminate all columns with NAs in them
 trainClean &lt;- extractColumnsWithTooManyNAs(trainSet)
 testClean &lt;- extractColumnsWithTooManyNAs(testSet)
-print(paste0(&quot;'trainClean' data set with &quot;,dim(trainClean)[1], &quot; observations&quot;, &quot; on &quot;, dim(trainClean)[2], &quot; variables.&quot;))
-print(paste0(&quot;'testClean' data set with &quot;, dim(testClean)[1], &quot; observations on &quot;, dim(testClean)[2], &quot; variables.&quot;))</code></pre>
+print(paste0(&quot;'trainClean' data set with &quot;,dim(trainClean)[1], &quot; observations&quot;, &quot; on &quot;, dim(trainClean)[2]-1, &quot; variables.&quot;))
+print(paste0(&quot;'testClean' data set with &quot;, dim(testClean)[1], &quot; observations on &quot;, dim(testClean)[2], &quot; variables.&quot;))
+</code></pre>
 </div>
 
 
