@@ -70,6 +70,8 @@ extractColumnsWithTooManyNAs <- function( df){
 }
 # eliminate all columns with NAs in them
 trainClean <- extractColumnsWithTooManyNAs(trainSet)
+trainCleanVars <- trainClean[-dim(trainClean)[2]]
+classe <- trainClean[dim(trainClean)[2]]
 testClean <- extractColumnsWithTooManyNAs(testSet)
 print(paste0("'trainClean' data set with ",dim(trainClean)[1], " observations", " on ", dim(trainClean)[2]-1, " variables."))
 print(paste0("'testClean' data set with ", dim(testClean)[1], " observations on ", dim(testClean)[2], " variables."))
@@ -86,7 +88,7 @@ Vs. PC2 show that only PC5 conditions the output in an important way.
 ```{r, exploratory analysis with PCA, cache=TRUE,warning=FALSE,fig.align='center'}
 preproc <- preProcess(trainClean[-1],method = "pca",pcaComp = 5)
 dumbbellPC <- predict(preproc,trainClean[-1])
-featurePlot(x=dumbbellPC,y=trainClean$`trndat$classe`,plot="pairs")
+featurePlot(x=dumbbellPC,y=trainClean$classe,plot="pairs")
 ```
 
 # Generating a predictive model
@@ -100,7 +102,7 @@ parallel processing was necessary.
 
 ```{r preparing parallel, cache=TRUE, echo=TRUE, warning=FALSE}
 library(doParallel)
-cl<-makeCluster(4)
+cl<-makeCluster(6)
 registerDoParallel(cl)
 require(randomForest)
 ```
@@ -136,6 +138,9 @@ The final value used for the model was mtry = 29.
 Since the accuracy looks very high this model will be used to predict the
 test samples.
 
+```
+answers <- predict(rf_model_full,newdata = testClean)
+```
 
 # Appendix A. Code for cleaning the original data set
 
