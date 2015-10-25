@@ -21,20 +21,117 @@ Data source: [http://groupware.les.inf.puc-rio.br/har](http://groupware.les.inf.
 trndat<-read.csv(file="data/pml-training.csv")
 tstdat<-read.csv(file="data/pml-testing.csv")
 ```
+```{r, output from loading data,cache=FALSE,echo=FALSE}
+print(paste0("'trndat' data set: ",dim(trndat)[1], " observations", " on ", dim(trndat)[2]-1, " predictors."))
+print(paste0("'tstdat' data set: ",dim(tstdat)[1], " observations", " on ", dim(tstdat)[2]-1, " predictors."))
+```
 
 # Cleaning data set
 
-A first inspection showed there were too many columns with `NA` values.
-A first approach was to get rid of those columns. A total of 36 variables
-were discarded. Then the `NA`s were imputed using the `knnImpute`
-method and the data was centered and scaled through the `preProcess`
-function from the package `caret`.
+A first inspection showed there were many columns with 
+non-numeric values. Discarding those columns removed 36 variables.
+The `knnImpute` could not be used on this data set because of the
+sensitivity of the time series. 
 
-The number of predictors went from an initial 159 to 123 after imputing and
-finally to 57 after eliminating all remaining `NA`s remaining 
-with the custom function `extractColumnsWithTooManyNAs` as shown below.
+```{r, cleaning data part A,cache=TRUE,warning=FALSE,echo=FALSE,error=FALSE}
+library(caret)
+# get the column class
+column_class <- function( col ){ifelse(is.data.frame(col), class(col[[1]]), class(col))}
+extractNumericCols <- function( df ) {
+  # get the column names to index inot the data frame
+  l_col_names <- names(df)
+  # nullify the columns with non-numeric values, return list of data.frames
+  l <- sapply(l_col_names, 
+              function(x) { cls <- column_class( df[x] );
+              ifelse(cls %in% c("numeric","integer"), df[x], "NULL")})
+  # filter the columns where there are only numeric values
+  isNULL <- which(l[names(l)] =="NULL"); ll <- l[-isNULL] 
+  # compose a data frame with the numeric columns (data.frames)
+  ndf <- do.call(cbind.data.frame,ll)
+}
+# new data frame with only numeric columns:
+trainSet <- extractNumericCols(trndat)
+# add outcome column as column #1:
+trainSet$classe <- trndat$classe
+# filter the numeric columns in the test set
+numericColNames <- colnames(trainSet)
+testSet <- tstdat[,which(colnames(tstdat) %in% numericColNames)]
+print(paste0("'trainSet' data set with ",dim(trainSet)[1], " observations", " on ", dim(trainSet)[2]-1, " predictors."))
+```
+The predictors with remaining `NA`s were eliminated
+using the custom function `extractColumnsWithTooManyNAs` as shown in the
+code shown in Appendix A.
 
-```{r, cleaning data,cache=TRUE,warning=FALSE}
+```{r, cleaning data part B,cache=TRUE,warning=FALSE,echo=FALSE,error=FALSE}
+#if there are still columns with NAs eliminate them altogether
+extractColumnsWithTooManyNAs <- function( df){
+  l <- sapply(colnames(df), function(x) any( is.na(df[x][[1]]) ) )
+  df[-which(l)]
+}
+# eliminate all columns with NAs in them
+trainClean <- extractColumnsWithTooManyNAs(trainSet)
+testClean <- extractColumnsWithTooManyNAs(testSet)
+print(paste0("'trainClean' data set with ",dim(trainClean)[1], " observations", " on ", dim(trainClean)[2]-1, " variables."))
+print(paste0("'testClean' data set with ", dim(testClean)[1], " observations on ", dim(testClean)[2], " variables."))
+```
+
+
+# Exploratory analysys
+
+Principal component analysis was used due to the high number of predictors.
+A five component PCA shows that there are visible clusters for the PC1 and PC2 
+interaction. There is only one outlier from this analysis. Further plots of PC1
+Vs. PC2 show that only PC5 conditions the output in an important way.
+
+```{r, exploratory analysis with PCA, cache=TRUE,warning=FALSE,fig.align='center'}
+preproc <- preProcess(trainClean[-1],method = "pca",pcaComp = 5)
+dumbbellPC <- predict(preproc,trainClean[-1])
+featurePlot(x=dumbbellPC,y=trainClean$`trndat$classe`,plot="pairs")
+```
+
+# Generating a predictive model
+
+The non-linear behaviour observed in the pricipal component analysis
+motivated a random forest algorithm to be used for predicting the
+type of the dumbbell bicep curl.
+
+```{r, random forest model, cache=TRUE, warning=FALSE}
+library(doParallel)
+# cl<-makeCluster(detectCores())
+cl<-makeCluster(4)
+registerDoParallel(cl)
+require(randomForest)
+dumbbellPC$classe <- trainClean$`trndat$classe`
+trainD<-createDataPartition(y=dumbbellPC$classe,p=0.3,list = FALSE)
+trainingPCsmall <-dumbbellPC[trainD,]
+```
+```
+rf_model_PC <- train(classe~.,data=trainingPCsmall,
+                     method="rf",
+                     trControl=trainControl(method="cv",number=5),
+                     prox=TRUE,
+                     allowParallel=TRUE)
+rf_model_PC
+```
+This model has 
+Another model can be build using all 53 variables:
+
+```
+trainClean$classe <- trainClean$`trndat$classe`
+trainClean$`trndat$classe`<- NULL
+rf_model_full <- train(classe~.,data=trainClean,
+                  method="rf",
+                  trControl=trainControl(method="cv",number=5),
+                  prox=TRUE,
+                  allowParallel=TRUE)
+rf_model_full
+```
+
+
+# Appendix A. Code for cleaning the original data set
+
+
+```
 library(caret)
 # get the column class
 column_class <- function( col ){ifelse(is.data.frame(col), class(col[[1]]), class(col))}
@@ -51,14 +148,14 @@ extractNumericCols <- function( df ) {
   ndf <- do.call(cbind.data.frame,ll)
 }
 # new data frame with only numeric columns:
-trndf <- extractNumericCols(trndat)
+trainSet <- extractNumericCols(trndat)
 # add outcome column as column #1:
-trndf <- cbind(trndat$classe,trndf,deparse.level = 1)
+trainSet <- cbind(trndat$classe,trainSet,deparse.level = 1)
 # filter the numeric columns in the test set
-numericColNames <- colnames(trndf)
-tstdf <- tstdat[,which(colnames(tstdat) %in% numericColNames)]
+numericColNames <- colnames(trainSet)
+testSet <- tstdat[,which(colnames(tstdat) %in% numericColNames)]
 #Impute and standarize:
-preObj <- preProcess(trndf[,-1],method = "knnImpute")
+preObj <- preProcess(trainSet[,-1],method = "knnImpute")
 
 #if there are still columns with NAs eliminate them altogether
 extractColumnsWithTooManyNAs <- function( df){
@@ -66,58 +163,10 @@ extractColumnsWithTooManyNAs <- function( df){
   df[-which(l)]
 }
 # eliminate all columns with NAs in them
-trnD <- extractColumnsWithTooManyNAs(trndf)
-tstD <- extractColumnsWithTooManyNAs(tstdf)
-print(paste0(dim(trnD)[1], " training observations", " on ", dim(trnD)[2], " variables after cleaning data."))
+trainClean <- extractColumnsWithTooManyNAs(trainSet)
+testClean <- extractColumnsWithTooManyNAs(testSet)
+print(paste0("'trainClean' data set with ",dim(trainClean)[1], " observations", " on ", dim(trainClean)[2], " variables."))
+print(paste0("'testClean' data set with ", dim(testClean)[1], " observations on ", dim(testClean)[2], " variables."))
 ```
 
-# Exploratory analysys
 
-Principal component analysis was used due to the high number of predictors.
-A five component PCA shows that there are visible clusters for the PC1 and PC2 
-interaction. There is only one outlier from this analysis. Further plots of PC1
-Vs. PC2 show that only PC5 conditions the output in an important way.
-
-```{r, exploratory analysis with PCA, cache=TRUE,warning=FALSE,fig.align='center'}
-preproc <- preProcess(trnD[-1],method = "pca",pcaComp = 5)
-dumbbellPC <- predict(preproc,trnD[-1])
-featurePlot(x=dumbbellPC,y=trnD$`trndat$classe`,plot="pairs")
-```
-
-# Generating a predictive model
-
-The non-linear behaviour observed in the pricipal component analysis
-motivated a random forest algorithm to be used for predicting the
-type of the dumbbell bicep curl.
-
-```{r, random forest model, cache=TRUE, warning=FALSE}
-library(doParallel)
-# cl<-makeCluster(detectCores())
-cl<-makeCluster(4)
-registerDoParallel(cl)
-require(randomForest)
-dumbbellPC$classe <- trnD$`trndat$classe`
-trainD<-createDataPartition(y=dumbbellPC$classe,p=0.3,list = FALSE)
-trainingPCsmall <-dumbbellPC[trainD,]
-```
-```
-rf_model_PC <- train(classe~.,data=trainingPCsmall,
-                     method="rf",
-                     trControl=trainControl(method="cv",number=5),
-                     prox=TRUE,
-                     allowParallel=TRUE)
-rf_model_PC
-```
-This model has 
-Another model can be build using all 53 variables:
-
-```
-trnD$classe <- trnD$`trndat$classe`
-trnD$`trndat$classe`<- NULL
-rf_model_full <- train(classe~.,data=trnD,
-                  method="rf",
-                  trControl=trainControl(method="cv",number=5),
-                  prox=TRUE,
-                  allowParallel=TRUE)
-rf_model_full
-```
